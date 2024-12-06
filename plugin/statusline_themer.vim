@@ -5,48 +5,50 @@ if exists('g:loaded_statusline_themer')
 endif
 let g:loaded_statusline_themer = 1
 
-" Default settings
-if !exists('g:statusline_themer_dirs')
-  let g:statusline_themer_dirs = [
-        \ '~/.vim',
-        \ '/usr/share/vim/vimfiles',
-        \ expand('~/.vim/plugged/vim-airline-themes/autoload/airline/themes'),
-        \ expand('~/.local/share/nvim/plugged/vim-airline-themes/autoload/airline/themes'),
-        \ ]
+" Default settings with path handling for different plugin managers and locations
+let g:statusline_themer_dirs = get(g:, 'statusline_themer_dirs', [
+      \ '~/.vim/pack/plugins/start/vim-airline-themes/autoload/airline/themes'
+      \ ])
+
+" Core configuration options with sensible defaults
+let g:statusline_themer_silent = get(g:, 'statusline_themer_silent', 0)
+let g:statusline_themer_mode = get(g:, 'statusline_themer_mode', 'manual')
+let g:statusline_themer_pywal_update_interval = get(g:, 'statusline_themer_pywal_update_interval', 5000)
+let g:statusline_themer_tmuxline_save = get(g:, 'statusline_themer_tmuxline_save', 1)
+let g:statusline_themer_disable_keybindings = get(g:, 'statusline_themer_disable_keybindings', 0)
+
+" Ensure required dependencies
+if !exists('g:loaded_airline')
+  echohl ErrorMsg | echo "vim-statusline-themer requires vim-airline" | echohl None
+  finish
 endif
 
-if !exists('g:statusline_themer_silent')
-  let g:statusline_themer_silent = 0
-endif
+" Define user commands with proper completion
+command! -nargs=? -complete=customlist,statusline_themer#complete_themes StatuslineThemeSelect call statusline_themer#select_theme(<f-args>)
+command! -nargs=0 StatuslineSaveTheme call statusline_themer#save_theme()
+command! -nargs=0 StatuslinePywalMode call statusline_themer#toggle_pywal_mode()
+command! -nargs=0 StatuslineApplyPywal call statusline_themer#apply_pywal()
+command! -nargs=0 StatuslineReload call statusline_themer#reload()
 
-if !exists('g:statusline_themer_disable_keybindings')
-  let g:statusline_themer_disable_keybindings = 0
-endif
-
-if !exists('g:statusline_themer_pywal_update_interval')
-  let g:statusline_themer_pywal_update_interval = 5000  " in milliseconds
-endif
-
-if !exists('g:statusline_themer_mode')
-  let g:statusline_themer_mode = 'manual'  " Options: 'manual', 'pywal'
-endif
-
-" Defer the initialization until Vim has finished loading
+" Setup initialization and cleanup autocommands
 augroup StatuslineThemerInit
   autocmd!
-  autocmd VimEnter * call statusline_themer#init()
+  " Initialize after Vim is fully loaded
+  autocmd VimEnter * ++nested call statusline_themer#init()
+  " Preserve theme after colorscheme changes, but only after initialization
+  autocmd ColorScheme * if exists('g:statusline_themer_initialized') | call statusline_themer#preserve_theme() | endif
 augroup END
 
-" Define commands
-command! StatuslineThemeSelect call statusline_themer#theme_select()
-command! StatuslineSaveTheme call statusline_themer#save_theme()
-command! StatuslinePywalMode call statusline_themer#toggle_pywal_mode()
-command! StatuslineApplyPywal call statusline_themer#apply_pywal()
+augroup StatuslineThemerCleanup
+  autocmd!
+  autocmd VimLeave * call statusline_themer#cleanup()
+augroup END
 
-" Keybindings
+" Default keybindings unless disabled
 if !g:statusline_themer_disable_keybindings
   nnoremap <silent> <leader>at :StatuslineThemeSelect<CR>
   nnoremap <silent> <leader>as :StatuslineSaveTheme<CR>
   nnoremap <silent> <leader>am :StatuslinePywalMode<CR>
   nnoremap <silent> <leader>ap :StatuslineApplyPywal<CR>
+  nnoremap <silent> <leader>ar :StatuslineReload<CR>
 endif
