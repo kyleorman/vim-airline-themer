@@ -20,6 +20,26 @@ function! s:remove_vim_lock() abort
   endif
 endfunction
 
+function! s:get_lock_dir() abort
+  let l:xdg_runtime = empty($XDG_RUNTIME_DIR) ? '/tmp' : $XDG_RUNTIME_DIR
+  return l:xdg_runtime . '/tmux-statusline-monitor'
+endfunction
+
+function! s:create_vim_lock() abort
+  let l:lock_dir = s:get_lock_dir()
+  if !isdirectory(l:lock_dir)
+    call mkdir(l:lock_dir, 'p')
+  endif
+  call writefile([''], l:lock_dir . '/vim-controlled')
+endfunction
+
+function! s:remove_vim_lock() abort
+  let l:lock_file = s:get_lock_dir() . '/vim-controlled'
+  if filereadable(l:lock_file)
+    call delete(l:lock_file)
+  endif
+endfunction
+
 if exists('g:loaded_statusline_themer_autoload')
   finish
 endif
